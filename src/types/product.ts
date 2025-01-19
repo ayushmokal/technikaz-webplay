@@ -1,76 +1,80 @@
-import type { Json } from "@/integrations/supabase/types";
-
 export interface BaseProduct {
   id: string;
   name: string;
   brand: string;
+  model_name?: string;
   price: number;
-  image_url: string | null;
   display_specs: string;
   processor: string;
   ram: string;
   storage: string;
   battery: string;
-  os: string | null;
-  color: string | null;
+  color?: string;
+  os?: string;
+  image_url?: string;
+  gallery_images?: string[];
   created_at: string;
   updated_at: string;
-  gallery_images: string[] | null;
-  model_name: string | null;
-  design_specs?: Record<string, any>;
-  display_details?: Record<string, any>;
-  performance_specs?: Record<string, any>;
-  multimedia_specs?: Record<string, any>;
-}
-
-export interface LaptopProduct extends BaseProduct {
-  graphics: string | null;
-  ports: string | null;
-  connectivity_specs?: Record<string, any>;
 }
 
 export interface MobileProduct extends BaseProduct {
   camera: string;
-  chipset?: string | null;
-  charging_specs?: string | null;
-  resolution?: string | null;
-  screen_size?: string | null;
-  announced?: string | null;
-  status?: string | null;
-  display_type?: string | null;
-  display_protection?: string | null;
-  dimensions?: string | null;
-  weight?: string | null;
-  build_material?: string | null;
-  sim_type?: string | null;
-  protection_rating?: string | null;
-  battery_type?: string | null;
-  wlan?: string | null;
-  bluetooth?: string | null;
-  nfc?: boolean;
-  gps?: string | null;
-  usb_type?: string | null;
-  network_technology?: string | null;
-  network_speed?: string | null;
-  sensors?: string[];
-  available_colors?: string[];
-  bands_2g?: string[];
-  bands_3g?: string[];
-  bands_4g?: string[];
-  bands_5g?: string[];
+  chipset?: string;
+  charging_specs?: string;
+  resolution?: string;
+  screen_size?: string;
+  announced?: string;
+  status?: string;
   display_features?: Record<string, any>;
+  camera_details?: Record<string, any>;
+  sensor_specs?: Record<string, any>;
+  network_specs?: Record<string, any>;
+  general_specs?: Record<string, any>;
+  design_specs?: Record<string, any>;
+  display_details?: Record<string, any>;
+  performance_specs?: Record<string, any>;
+  multimedia_specs?: Record<string, any>;
+  battery_charging?: Record<string, any>;
   main_camera_specs?: Record<string, any>;
   main_camera_features?: Record<string, any>;
   main_camera_video?: Record<string, any>;
   selfie_camera_specs?: Record<string, any>;
   selfie_camera_features?: Record<string, any>;
   selfie_camera_video?: Record<string, any>;
-  battery_charging?: Record<string, any>;
-  loudspeaker_type?: string | null;
   audio_jack?: boolean;
+  available_colors?: string[];
+  bands_2g?: string[];
+  bands_3g?: string[];
+  bands_4g?: string[];
+  bands_5g?: string[];
+  battery_type?: string;
+  dimensions?: string;
+  weight?: string;
+  build_material?: string;
+  sim_type?: string;
+  protection_rating?: string;
+  wlan?: string;
+  bluetooth?: string;
+  nfc?: boolean;
+  gps?: string;
+  usb_type?: string;
   radio?: boolean;
   infrared?: boolean;
-  card_slot?: boolean;
+  network_technology?: string;
+  network_speed?: string;
+  loudspeaker_type?: string;
+  sensors?: string[];
+  model_variants?: string[];
+}
+
+export interface LaptopProduct extends BaseProduct {
+  graphics?: string;
+  ports?: string;
+  connectivity_specs?: Record<string, any>;
+  design_specs?: Record<string, any>;
+  display_details?: Record<string, any>;
+  performance_specs?: Record<string, any>;
+  multimedia_specs?: Record<string, any>;
 }
 
 export type Product = MobileProduct | LaptopProduct;
