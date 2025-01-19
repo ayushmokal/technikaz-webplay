@@ -11,9 +11,10 @@ import { FormFields } from "./FormFields";
 interface BlogFormProps {
   initialData?: BlogFormData;
   mode?: 'create' | 'edit';
+  onSuccess?: () => void;
 }
 
-export function BlogForm({ initialData, mode = 'create' }: BlogFormProps) {
+export function BlogForm({ initialData, mode = 'create', onSuccess }: BlogFormProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -164,6 +165,10 @@ export function BlogForm({ initialData, mode = 'create' }: BlogFormProps) {
 
         form.reset();
         setImageFile(null);
+      }
+
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error: any) {
       toast({

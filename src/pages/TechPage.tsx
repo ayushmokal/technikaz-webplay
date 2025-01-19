@@ -13,6 +13,42 @@ const ITEMS_PER_PAGE = 8;
 export default function TechPage() {
   const [subcategory, setSubcategory] = useState<"MOBILE" | "LAPTOPS">("MOBILE");
 
+  // Query for category-specific featured articles
+  const { data: featuredArticles } = useInfiniteQuery({
+    queryKey: ['tech-featured-articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('category', 'TECH')
+        .eq('featured_in_category', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    initialPageParam: 0,
+    getNextPageParam: () => null, // No pagination for featured articles
+  });
+
+  // Query for all tech articles
+  const { data: articles } = useInfiniteQuery({
+    queryKey: ['tech-articles', subcategory],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('category', 'TECH')
+        .eq('subcategory', subcategory)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    initialPageParam: 0,
+    getNextPageParam: () => null, // No pagination for articles
+  });
+
   // Infinite query for mobile products
   const {
     data: mobileData,
@@ -98,17 +134,15 @@ export default function TechPage() {
     </div>
   );
 
-  const handleSubcategoryChange = (newSubcategory: string) => {
-    setSubcategory(newSubcategory as typeof subcategory);
-  };
-
   return (
     <CategoryPageLayout
       title="Tech"
       category="TECH"
+      articles={articles?.pages.flatMap(page => page) || []}
+      featuredArticles={featuredArticles?.pages.flatMap(page => page) || []}
       subcategories={categories.TECH}
       selectedSubcategory={subcategory}
-      onSubcategoryChange={handleSubcategoryChange}
+      onSubcategoryChange={(sub) => setSubcategory(sub as typeof subcategory)}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <ProductGrids />
