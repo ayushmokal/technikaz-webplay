@@ -1,71 +1,97 @@
-import { ArrowRight, Zap, Shield, Smartphone } from "lucide-react";
-import Navbar from "../components/Navbar";
-import FeatureCard from "../components/FeatureCard";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
+import { FeaturedArticlesGrid } from "@/components/FeaturedArticlesGrid";
+import { CarouselSection } from "@/components/CarouselSection";
+import { ArticleTabs } from "@/components/ArticleTabs";
+import { BlogSidebar } from "@/components/BlogSidebar";
+import { PopularMobiles } from "@/components/product/PopularMobiles";
+import type { BlogFormData } from "@/types/blog";
 
-const Index = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      <Navbar />
+export default function Index() {
+  const [activeTab, setActiveTab] = useState("popular");
+
+  const { data: featuredArticles = [] } = useQuery({
+    queryKey: ['featured-articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('featured', true)
+        .order('created_at', { ascending: false })
+        .limit(6); // Limit to exactly 6 featured articles
       
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <span className="inline-block animate-fade-up px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-            Welcome to Technikaz
-          </span>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-            The Future of Technology
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: "0.2s" }}>
-            Experience innovation at its finest. Discover how our solutions can transform your digital journey.
-          </p>
-          <div className="flex items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-            <button className="px-8 py-3 bg-primary text-white rounded-full hover:opacity-90 transition-opacity flex items-center gap-2">
-              Get Started <ArrowRight className="w-4 h-4" />
-            </button>
-            <button className="px-8 py-3 bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors">
-              Learn More
-            </button>
-          </div>
-        </div>
-      </section>
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-              Features
-            </span>
-            <h2 className="text-4xl font-bold mt-4 mb-6">
-              Everything you need
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover the tools and features that make our platform unique
-            </p>
+  const { data: popularArticles = [] } = useQuery({
+    queryKey: ['popular-articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('popular', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: recentArticles = [] } = useQuery({
+    queryKey: ['recent-articles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(6);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <main className="container mx-auto px-4 py-8">
+        <FeaturedArticlesGrid articles={featuredArticles} />
+
+        <div className="w-full h-[200px] bg-gray-200 flex items-center justify-center my-8">
+          <span className="text-gray-500">Advertisement</span>
+        </div>
+
+        <CarouselSection 
+          title="Tech Deals" 
+          linkTo="/tech" 
+          articles={popularArticles.filter(article => article.category === 'TECH')} 
+        />
+
+        <PopularMobiles />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8">
+            <ArticleTabs
+              popularArticles={popularArticles}
+              recentArticles={recentArticles}
+              onTabChange={setActiveTab}
+              category="HOME"
+            />
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<Zap className="w-6 h-6 text-primary" />}
-              title="Lightning Fast"
-              description="Experience blazing fast performance with our optimized platform"
-            />
-            <FeatureCard
-              icon={<Shield className="w-6 h-6 text-primary" />}
-              title="Secure by Design"
-              description="Your data is protected with enterprise-grade security"
-            />
-            <FeatureCard
-              icon={<Smartphone className="w-6 h-6 text-primary" />}
-              title="Mobile Ready"
-              description="Access your work from any device, anywhere, anytime"
-            />
+
+          <div className="lg:col-span-4">
+            <BlogSidebar />
           </div>
         </div>
-      </section>
+      </main>
+
+      <Footer />
     </div>
   );
-};
-
-export default Index;
+}
