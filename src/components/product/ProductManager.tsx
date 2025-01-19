@@ -31,7 +31,6 @@ export function ProductManager() {
 
   const handleDelete = async (id: string) => {
     try {
-      // Try deleting from both tables since we don't know which one it's in
       await Promise.all([
         supabase.from("mobile_products").delete().eq("id", id),
         supabase.from("laptops").delete().eq("id", id)
@@ -69,16 +68,14 @@ export function ProductManager() {
       {selectedProduct && (
         <ProductDetailsDialog
           product={selectedProduct}
-          open={!!selectedProduct}
-          onOpenChange={() => setSelectedProduct(null)}
+          onClose={() => setSelectedProduct(null)}
         />
       )}
 
       {selectedProductForEdit && (
         <ProductEditDialog
           product={selectedProductForEdit}
-          open={!!selectedProductForEdit}
-          onOpenChange={() => setSelectedProductForEdit(null)}
+          onClose={() => setSelectedProductForEdit(null)}
           onSuccess={() => {
             setSelectedProductForEdit(null);
             refetch();
@@ -88,21 +85,21 @@ export function ProductManager() {
 
       {selectedProductForImages && (
         <ProductImageDialog
-          product={selectedProductForImages}
-          open={!!selectedProductForImages}
-          onOpenChange={() => setSelectedProductForImages(null)}
+          productId={selectedProductForImages.id}
+          currentImage={selectedProductForImages.image_url}
+          currentGalleryImages={selectedProductForImages.gallery_images}
+          onClose={() => setSelectedProductForImages(null)}
           onSuccess={() => {
             setSelectedProductForImages(null);
             refetch();
           }}
+          type={selectedProductForImages.graphics ? 'laptop' : 'mobile'}
         />
       )}
 
       {selectedProductForReview && (
         <ExpertReviewForm
-          product={selectedProductForReview}
-          open={isReviewOpen}
-          onOpenChange={setIsReviewOpen}
+          productId={selectedProductForReview.id}
           onSuccess={() => {
             setSelectedProductForReview(null);
             setIsReviewOpen(false);

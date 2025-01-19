@@ -17,16 +17,16 @@ export interface BaseProduct {
   updated_at: string;
   gallery_images: string[] | null;
   model_name: string | null;
-  design_specs?: Json;
-  display_details?: Json;
-  performance_specs?: Json;
-  multimedia_specs?: Json;
+  design_specs?: Record<string, any>;
+  display_details?: Record<string, any>;
+  performance_specs?: Record<string, any>;
+  multimedia_specs?: Record<string, any>;
 }
 
 export interface LaptopProduct extends BaseProduct {
   graphics: string | null;
   ports: string | null;
-  connectivity_specs?: Json;
+  connectivity_specs?: Record<string, any>;
 }
 
 export interface MobileProduct extends BaseProduct {
