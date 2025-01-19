@@ -1,139 +1,80 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { DialogTitle } from "@/components/ui/dialog";
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Search } from "lucide-react";
+
+interface SearchResult {
+  id: string;
+  title: string;
+  category: string;
+  created_at: string;
+  slug: string;
+}
 
 export function SearchBar() {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const [query, setQuery] = useState("");
 
-  const { data: searchResults } = useQuery({
-    queryKey: ['blogs', searchQuery],
+  const { data: results = [], isLoading } = useQuery({
+    queryKey: ["search", query],
     queryFn: async () => {
-      if (!searchQuery.trim()) return null;
+      if (!query) return [];
       
-      const { data, error } = await supabase 
-        .from('blogs')
-        .select('id, title, category, created_at, slug')
-        .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,meta_description.ilike.%${searchQuery}%,meta_keywords.ilike.%${searchQuery}%`)
+      const { data, error } = await supabase
+        .from("blogs")
+        .select("id, title, category, created_at, slug")
+        .ilike("title", `%${query}%`)
         .limit(5);
-      
-      if (error) { 
-        console.error('Error searching blogs:', error);
-        toast({
-          variant: "destructive",
-          title: "Search failed",
-          description: "Please try again later",
-        });
-        return null;
-      }
-      
-      return data;
+
+      if (error) throw error;
+      return data as SearchResult[];
     },
-    enabled: searchQuery.length >= 2,
-    staleTime: 0,
-    cacheTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchInterval: 1000
+    enabled: query.length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   return (
-    <div className={isMobile ? "relative" : "relative w-full max-w-[250px] sm:max-w-[350px]"}>
-      {isMobile ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setOpen(true)}
-          className="h-8 w-8 p-0"
-        >
-          <Search className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-start text-muted-foreground"
-          onClick={() => setOpen(true)}
-        >
-          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-          Search articles...
-        </Button>
-      )}
-      <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
-        <div className="flex items-center justify-between p-2 border-b">
-          <DialogTitle className="text-lg font-semibold">Search Articles</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setOpen(false)}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <>
+      <Button
+        variant="outline"
+        className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2"
+        onClick={() => setOpen(true)}
+      >
+        <Search className="h-4 w-4 xl:mr-2" />
+        <span className="hidden xl:inline-flex">Search articles...</span>
+      </Button>
+      <CommandDialog open={open} onOpenChange={setOpen}>
         <Command>
-          <CommandInput
-            placeholder="Type to search articles..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            autoFocus
+          <CommandInput 
+            placeholder="Type to search..." 
+            value={query}
+            onValueChange={setQuery}
           />
-          <CommandList className="max-h-[50vh] overflow-y-auto">
-            <CommandEmpty>
-              {!searchQuery.trim() ? (
-                "Start typing to search..."
-              ) : searchQuery.length < 2 ? (
-                "Type at least 2 characters to search..."
-              ) : (
-                "No matching articles found. Try different keywords."
-              )}
-            </CommandEmpty>
-            {searchResults?.length > 0 && (
-              <CommandGroup heading="Search Results">
-              {searchResults?.map((article) => (
-                <CommandItem
-                  key={article.id}
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Articles">
+              {results.map((result) => (
+                <CommandItem 
+                  key={result.id}
+                  value={result.title}
                   onSelect={() => {
-                    navigate(`/article/${article.slug}`);
-                    setOpen(false);
-                    setSearchQuery("");
+                    window.location.href = `/article/${result.slug}`;
                   }}
-                  className="flex items-center gap-2 p-2 cursor-pointer"
                 >
-                  <Search className="h-4 w-4 text-muted-foreground" />
                   <div className="flex flex-col">
-                    <span className="font-medium line-clamp-1">{article.title}</span>
-                    <span className="text-xs text-muted-foreground line-clamp-1">
-                      {article.category} • {new Date(article.created_at).toLocaleDateString()}
+                    <span>{result.title}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {result.category}
                     </span>
                   </div>
                 </CommandItem>
               ))}
-              </CommandGroup>
-            )}
+            </CommandGroup>
           </CommandList>
         </Command>
       </CommandDialog>
-    </div>
+    </>
   );
 }
