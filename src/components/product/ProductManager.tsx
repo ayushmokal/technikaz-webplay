@@ -3,29 +3,30 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductTable } from "./ProductTable";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
-import { ProductEditDialog } from "../admin/ProductEditDialog";
-import { ProductImageDialog } from "../admin/ProductImageDialog";
-import { ExpertReviewForm } from "../admin/ExpertReviewForm";
+import { ProductEditDialog } from "./ProductEditDialog";
+import { ProductImageDialog } from "./ProductImageDialog";
+import { ExpertReviewForm } from "@/components/admin/ExpertReviewForm";
 import type { Product } from "@/types/product";
-import { useToast } from "@/hooks/use-toast";
 
 export function ProductManager() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<Product | null>(null);
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [selectedProductForReview, setSelectedProductForReview] = useState<Product | null>(null);
   const [selectedProductForImages, setSelectedProductForImages] = useState<Product | null>(null);
-  const { toast } = useToast();
+  const [selectedProductForReview, setSelectedProductForReview] = useState<Product | null>(null);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const { data: products = [], refetch } = useQuery({
-    queryKey: ["products"],
+    queryKey: ['products'],
     queryFn: async () => {
-      const [{ data: mobiles }, { data: laptops }] = await Promise.all([
+      const [mobileRes, laptopRes] = await Promise.all([
         supabase.from("mobile_products").select("*"),
         supabase.from("laptops").select("*")
       ]);
 
-      return [...(mobiles || []), ...(laptops || [])] as Product[];
+      if (mobileRes.error) throw mobileRes.error;
+      if (laptopRes.error) throw laptopRes.error;
+
+      return [...mobileRes.data, ...laptopRes.data] as Product[];
     }
   });
 
@@ -35,34 +36,34 @@ export function ProductManager() {
         supabase.from("mobile_products").delete().eq("id", id),
         supabase.from("laptops").delete().eq("id", id)
       ]);
-      
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      });
-      
       refetch();
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
     }
   };
 
+  const handleEdit = (product: Product) => {
+    setSelectedProductForEdit(product);
+  };
+
+  const handleViewImages = (product: Product) => {
+    setSelectedProductForImages(product);
+  };
+
+  const handleAddReview = (product: Product) => {
+    setSelectedProductForReview(product);
+    setIsReviewOpen(true);
+  };
+
   return (
-    <div className="space-y-4">
+    <div>
       <ProductTable
         products={products}
-        onView={(product) => setSelectedProduct(product)}
-        onEdit={(product) => setSelectedProductForEdit(product)}
-        onAddReview={(product) => {
-          setSelectedProductForReview(product);
-          setIsReviewOpen(true);
-        }}
         onDelete={handleDelete}
-        onUpdateImages={(product) => setSelectedProductForImages(product)}
+        onEdit={handleEdit}
+        onViewImages={handleViewImages}
+        onAddReview={handleAddReview}
+        onView={setSelectedProduct}
       />
 
       {selectedProduct && (
@@ -75,6 +76,7 @@ export function ProductManager() {
       {selectedProductForEdit && (
         <ProductEditDialog
           product={selectedProductForEdit}
+          productType={selectedProductForEdit.graphics ? 'laptop' : 'mobile'}
           onClose={() => setSelectedProductForEdit(null)}
           onSuccess={() => {
             setSelectedProductForEdit(null);
@@ -88,6 +90,7 @@ export function ProductManager() {
           productId={selectedProductForImages.id}
           currentImage={selectedProductForImages.image_url}
           currentGalleryImages={selectedProductForImages.gallery_images}
+          isOpen={true}
           onClose={() => setSelectedProductForImages(null)}
           onSuccess={() => {
             setSelectedProductForImages(null);
@@ -103,6 +106,7 @@ export function ProductManager() {
           onSuccess={() => {
             setSelectedProductForReview(null);
             setIsReviewOpen(false);
+            refetch();
           }}
         />
       )}

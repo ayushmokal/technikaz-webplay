@@ -43,6 +43,8 @@ export interface MobileProduct extends BaseProduct {
   weight?: string | null;
   build_material?: string | null;
   sim_type?: string | null;
+  protection_rating?: string | null;
+  battery_type?: string | null;
   wlan?: string | null;
   bluetooth?: string | null;
   nfc?: boolean;

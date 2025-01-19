@@ -1,113 +1,159 @@
 import { useState } from "react";
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CategoryHero } from "@/components/CategoryHero";
-import { ArticleGrid } from "@/components/ArticleGrid";
-import { ArticleTabs } from "@/components/ArticleTabs";
-import { BlogSidebar } from "@/components/BlogSidebar";
 import { categories } from "@/types/blog";
-import { CategoryHeader } from "@/components/CategoryHeader";
-import type { Subcategory } from "@/types/blog";
+import { CategoryPageLayout } from "@/components/CategoryPageLayout";
+import { MobileProductList } from "@/components/product/MobileProductList";
+import { LaptopProductGrid } from "@/components/product/LaptopProductGrid";
+import { BlogSidebar } from "@/components/BlogSidebar";
+import type { MobileProduct, LaptopProduct } from "@/types/product";
+
+const ITEMS_PER_PAGE = 8;
 
 export default function GamesPage() {
-  const [platform, setPlatform] = useState<Subcategory | "ALL">("ALL");
-  const [activeTab, setActiveTab] = useState("popular");
+  const [subcategory, setSubcategory] = useState<"MOBILE" | "LAPTOPS">("MOBILE");
 
   // Query for category-specific featured articles
-  const { data: featuredArticles = [] } = useQuery({
-    queryKey: ['games-featured-articles'],
+  const { data: featuredArticles } = useInfiniteQuery({
+    queryKey: ['gadgets-featured-articles'],
     queryFn: async () => {
-      console.log('Fetching featured games articles');
       const { data, error } = await supabase
         .from('blogs')
         .select('*')
-        .eq('category', 'GAMES')
+        .eq('category', 'GADGETS')
         .eq('featured_in_category', true)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching featured games articles:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       return data || [];
-    }
+    },
+    initialPageParam: 0,
+    getNextPageParam: () => null, // No pagination for featured articles
   });
 
-  // Query for all games articles
-  const { data: articles = [] } = useQuery({
-    queryKey: ['games-articles', platform],
+  // Query for all gadgets articles
+  const { data: articles } = useInfiniteQuery({
+    queryKey: ['gadgets-articles', subcategory],
     queryFn: async () => {
-      console.log('Fetching games articles with platform:', platform);
-      let query = supabase
+      const { data, error } = await supabase
         .from('blogs')
         .select('*')
-        .eq('category', 'GAMES')
+        .eq('category', 'GADGETS')
+        .eq('subcategory', subcategory)
         .order('created_at', { ascending: false });
       
-      if (platform !== "ALL") {
-        query = query.eq('subcategory', platform);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching games articles:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       return data || [];
-    }
+    },
+    initialPageParam: 0,
+    getNextPageParam: () => null, // No pagination for articles
   });
 
-  const mainFeaturedArticle = featuredArticles[0];
-  const gridFeaturedArticles = featuredArticles.slice(1, 3);
-  const popularArticles = articles || [];
-  const recentArticles = articles.slice(0, 6) || [];
+  // Infinite query for mobile products
+  const {
+    data: mobileData,
+    fetchNextPage: fetchNextMobile,
+    hasNextPage: hasNextMobile,
+    isFetchingNextPage: isFetchingNextMobile
+  } = useInfiniteQuery({
+    queryKey: ['infinite-mobiles'],
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      const { data, error, count } = await supabase
+        .from('mobile_products')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      
+      if (error) throw error;
+      
+      return {
+        data: data || [],
+        nextPage: data && data.length === ITEMS_PER_PAGE ? pageParam + 1 : undefined,
+        totalCount: count
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 0
+  });
+
+  // Infinite query for laptops
+  const {
+    data: laptopData,
+    fetchNextPage: fetchNextLaptop,
+    hasNextPage: hasNextLaptop,
+    isFetchingNextPage: isFetchingNextLaptop
+  } = useInfiniteQuery({
+    queryKey: ['infinite-laptops'],
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      const { data, error, count } = await supabase
+        .from('laptops')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      
+      if (error) throw error;
+      
+      return {
+        data: data || [],
+        nextPage: data && data.length === ITEMS_PER_PAGE ? pageParam + 1 : undefined,
+        totalCount: count
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 0
+  });
+
+  // Flatten the pages data
+  const mobileProducts = mobileData?.pages.flatMap(page => page.data) || [];
+  const laptops = laptopData?.pages.flatMap(page => page.data) || [];
+
+  const ProductGrids = () => (
+    <div className="lg:col-span-8">
+      {subcategory === "MOBILE" && (
+        <MobileProductList 
+          products={mobileProducts}
+          onLoadMore={fetchNextMobile}
+          hasMore={hasNextMobile}
+          isLoading={isFetchingNextMobile}
+        />
+      )}
+      {subcategory === "LAPTOPS" && (
+        <LaptopProductGrid 
+          products={laptops}
+          onLoadMore={fetchNextLaptop}
+          hasMore={hasNextLaptop}
+          isLoading={isFetchingNextLaptop}
+        />
+      )}
+    </div>
+  );
+
+  const handleSubcategoryChange = (newSubcategory: string) => {
+    setSubcategory(newSubcategory as typeof subcategory);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <CategoryHeader
-        title="Games"
-        subcategories={categories.GAMES}
-        selectedSubcategory={platform}
-        onSubcategoryChange={setPlatform}
-      />
-
-      <main className="container mx-auto px-4 py-8">
-        {platform === "ALL" && mainFeaturedArticle && (
-          <CategoryHero 
-            featuredArticle={mainFeaturedArticle} 
-            gridArticles={gridFeaturedArticles} 
-          />
-        )}
-
-        <ArticleGrid articles={articles.slice(0, 4)} />
-
-        <div className="w-full h-[200px] bg-gray-200 flex items-center justify-center my-8">
-          <span className="text-gray-500">Advertisement</span>
+    <CategoryPageLayout
+      title="Gadgets"
+      category="GADGETS"
+      articles={articles?.pages.flatMap(page => page) || []}
+      featuredArticles={featuredArticles?.pages.flatMap(page => page) || []}
+      subcategories={categories.GADGETS}
+      selectedSubcategory={subcategory}
+      onSubcategoryChange={handleSubcategoryChange}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <ProductGrids />
+        <div className="lg:col-span-4">
+          <BlogSidebar />
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8">
-            <ArticleTabs
-              popularArticles={popularArticles}
-              recentArticles={recentArticles}
-              onTabChange={setActiveTab}
-              category="GAMES"
-            />
-          </div>
-
-          <div className="lg:col-span-4">
-            <BlogSidebar />
-          </div>
-        </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </CategoryPageLayout>
   );
 }

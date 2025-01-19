@@ -3,7 +3,7 @@ import { Separator } from "@/components/ui/separator";
 
 interface SpecificationItemProps {
   label: string;
-  value: string | number | boolean | null | undefined;
+  value: string | number | boolean | string[] | null | undefined;
 }
 
 function SpecificationItem({ label, value }: SpecificationItemProps) {
